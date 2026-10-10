@@ -1,0 +1,28 @@
+#+title: @0k/rrd-graph acceptance ledger
+
+One row per requirement of the extraction from =rrd-ui=, with its proof:
+a test of this package, a test of the =rrd-ui= host, or a named manual
+check where no automated test exists yet.  Update it whenever the scope
+changes.
+
+| Requirement                                                              | Proof                                                                 |
+|--------------------------------------------------------------------------+-----------------------------------------------------------------------|
+| Public entry exports components, composables, API, utils and helpers     | ~dist.check.mjs~ "built entries export the public API"              |
+| Vue is an external peer; time-chart and kal-sse-client stay external     | ~dist.check.mjs~ "dist imports its runtime dependencies"            |
+| Declarations are emitted for the entry, the API module and GraphCard     | ~dist.check.mjs~ "declarations cover entries and components"        |
+| Entries load by import and require; declarations use ~.js~ specifiers | ~dist.check.mjs~ "entries load through their exports", "declarations resolve under node16" |
+| =@0k/rrd-graph/api= imports neither Vue nor a chart library              | ~dist.check.mjs~ "api entry is framework-free"                      |
+| API base defaults to relative ~api/~ and is configurable, never ~/api~   | ~api.test.mjs~ base test, ~contracts.test.mjs~, ~graph-refresh~ base  |
+| Graph responses and watch events are validated                           | ~api.test.mjs~                                                        |
+| Graph descriptors validate type, stack_toggle and unit, no tree fields   | ~api.test.mjs~ descriptor test, ~contracts.test.mjs~ types test       |
+| Visible-first admission, then four prefetches below                      | ~schedule.test.mjs~, ~graph-scheduler.test.mjs~                       |
+| Tail range, merge and fallback rules                                     | ~chart.test.mjs~                                                      |
+| Card load/tail/abort/visibility/watch semantics unchanged                | ~graph-refresh.test.mjs~ (all cases moved from =rrd-ui=)              |
+| One card works without an injected scheduler or tree knowledge           | ~graph-refresh.test.mjs~ "standalone card"                            |
+| Linked charts share one link key                                         | ~contracts.test.mjs~                                                  |
+| Value formatting (IEC bytes, SI units)                                   | ~format.test.mjs~                                                     |
+| Graph card CSS ships with the package, themable by custom properties     | ~contracts.test.mjs~ style test, ~dist.check.mjs~ style.css export  |
+| Host (=rrd-ui=) keeps no copy of graph logic and imports the package     | =rrd-ui= ~frontend/test/contracts.test.mjs~                           |
+| Host loads package CSS after its own so card rules keep precedence       | =rrd-ui= ~frontend/test/contracts.test.mjs~                           |
+| Host tree, config status and range parsing still validated               | =rrd-ui= ~api.test.mjs~, ~range.test.mjs~, ~tree.test.mjs~            |
+| Host rendered card layout unchanged                                      | one-off Playwright comparison of computed styles, before/after builds |

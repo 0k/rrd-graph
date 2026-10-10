@@ -1,0 +1,27 @@
+/* Graph card and chart layout of @0k/rrd-graph.
+   Colours come from --rrd-graph-* custom properties (light fallbacks below);
+   hosts map them to their theme.  The card frame (.section, .section__head,
+   .section__note), .error-banner, .muted and buttons are host classes.
+   Load this sheet after the host sheet: .graph-card overrides .section padding. */
+.graph-card { min-width: 0; }
+/* Graph cards stay tight: the chart is the content, the box only frames it.
+   Horizontal padding is mirrored by CARD_PADDING_X in GraphCard.vue. */
+.graph-card { padding: 8px 12px; }
+.graph-card .section__head { margin-bottom: 4px; }
+.graph-card .section__note { margin-top: 4px; }
+.chart-host { position: relative; height: 320px; width: 100%; touch-action: pan-y; }
+.chart-placeholder { height: 320px; background: var(--rrd-graph-placeholder-background, #f6f7f9); border-radius: var(--rrd-graph-radius, 5px); }
+.chart-host--tall, .chart-placeholder--tall { height: min(70vh, 640px); min-height: 380px; }
+.no-data { display: flex; flex-direction: column; justify-content: center; min-height: 200px; text-align: center; color: var(--rrd-graph-muted, #5b6675); background: var(--rrd-graph-placeholder-background, #f6f7f9); border-radius: var(--rrd-graph-radius, 5px); padding: 16px; overflow-wrap: anywhere; }
+.no-data p { margin: 8px 0 0; font-size: var(--rrd-graph-small-font-size, 0.85rem); }
+.stack-toggle { display: inline-flex; margin-left: auto; align-self: center; }
+.stack-toggle button { font-size: 0.75rem; padding: 2px 8px; color: var(--rrd-graph-muted, #5b6675); }
+.stack-toggle button:first-child { border-radius: var(--rrd-graph-radius, 5px) 0 0 var(--rrd-graph-radius, 5px); }
+.stack-toggle button + button { margin-left: -1px; border-radius: 0 var(--rrd-graph-radius, 5px) var(--rrd-graph-radius, 5px) 0; }
+.stack-toggle button[aria-pressed='true'] { position: relative; background: var(--rrd-graph-accent-soft, #eef3ff); border-color: var(--rrd-graph-accent, #2563eb); color: var(--rrd-graph-accent, #2563eb); }
+.stale-badge { color: var(--rrd-graph-danger, #b42318); background: var(--rrd-graph-danger-soft, #fef3f2); border-radius: var(--rrd-graph-radius, 5px); padding: 2px 6px; font-size: 0.7rem; }
+@media (max-width: 650px) {
+  .graph-card { padding: 8px 12px; }
+  .chart-host, .chart-placeholder { height: 280px; }
+  .chart-host--tall, .chart-placeholder--tall { height: 380px; }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@0k/rrd-graph",
+  "version": "0.1.0",
+  "description": "Vue 3 graph card for rrd-ui time series: visible-first loading, live tails and linked pan/zoom.",
+  "keywords": ["vue", "vue3", "rrd", "time-series", "chart", "rrd-ui"],
+  "author": "Valentin Lab <valentin.lab@kalysto.org>",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": ["*.css"],
+  "files": ["dist", "README.md", "LICENSE"],
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./api": { "types": "./dist/api.d.ts", "default": "./dist/api.js" },
+    "./style.css": "./dist/style.css"
+  },
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "prepack": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "vue-tsc --noEmit",
+    "build": "vite build && vue-tsc -p tsconfig.build.json",
+    "test:package": "node --test test/dist.check.mjs",
+    "check": "npm run test && npm run typecheck && npm run build && npm run test:package"
+  },
+  "peerDependencies": { "vue": "^3.5.12" },
+  "dependencies": {
+    "@0k/kal-sse-client": "file:vendor/0k-kal-sse-client-0.1.0.tgz",
+    "@0k/time-chart": "^0.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.4.4",
+    "vue": "^3.5.12",
+    "vue-tsc": "^2.1.10"
+  }
+}

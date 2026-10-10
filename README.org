@@ -1,0 +1,148 @@
+#+title: @0k/rrd-graph
+
+Vue 3 graph card for the time series served by =rrd-ui=
+(~api/graph~, ~api/watch~).  One card fetches and draws one graph,
+keeps its data while a new window loads, follows file changes with
+small tail requests, and reports user pan/zoom so linked charts move
+together.  Several cards on a page share one scheduler: visible cards
+load first, then the next four below are prefetched.
+
+The package knows nothing about the =rrd-ui= tree, routing or period
+selection: the host gives each card a graph descriptor and a time
+window, and decides what a pan/zoom does.
+
+* Installation
+
+#+begin_src sh
+npm install @0k/rrd-graph vue
+#+end_src
+
+=vue= (~^3.5.12~) is a peer dependency.  Load the card stylesheet
+*after* the host stylesheet (see [[#styling][Styling]]):
+
+#+begin_src ts
+import './styles.css'
+import '@0k/rrd-graph/style.css'
+#+end_src
+
+* One graph next to a host panel
+
+A card without an injected scheduler schedules itself: it loads once it
+is on screen.
+
+#+begin_src vue
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { GraphCard, useGraphWatch, type GraphDescriptor, type TimeWindow } from '@0k/rrd-graph'
+
+const graph: GraphDescriptor = { id: 'load-average', title: 'Load average', type: 'line', stack_toggle: false, unit: null }
+const now = ref(Math.floor(Date.now() / 1000))
+// The last day, live, until the user pans or zooms the chart.
+const pinned = ref<TimeWindow | null>(null)
+const timeWindow = computed<TimeWindow>(() => pinned.value ?? { start: now.value - 86400, end: now.value, live: true })
+// Optional: tail the graph when its RRD files change.
+const changes = useGraphWatch(computed(() => [graph.id]), timeWindow, now)
+function onWindow(start: number, end: number): void {
+  pinned.value = { start, end, live: false }
+}
+</script>
+
+<template>
+  <aside class="host-panel">…</aside>
+  <GraphCard :graph="graph" :window="timeWindow" :change="changes[graph.id] ?? 0" @window="onWindow" />
+</template>
+#+end_src
+
+A live window is computed from ~now~: ~useGraphWatch~ advances ~now~
+when a change arrives, and a pure live slide only pans the data already
+held.
+
+* A page of graphs
+
+Provide one scheduler for the displayed cards, in display order:
+
+#+begin_src ts
+import { computed, provide, type Ref } from 'vue'
+import { GRAPH_SCHEDULER, useGraphScheduler, useGraphWatch, type GraphDescriptor, type TimeWindow } from '@0k/rrd-graph'
+
+// The host's displayed graphs, window and clock, as in the example above.
+declare const graphs: Ref<GraphDescriptor[]>, timeWindow: Ref<TimeWindow>, now: Ref<number>
+
+const ids = computed(() => graphs.value.map(graph => graph.id))
+provide(GRAPH_SCHEDULER, useGraphScheduler(ids))
+const changes = useGraphWatch(ids, timeWindow, now)
+#+end_src
+
+* ~GraphCard~
+
+| Prop       | Type              | Default  | Meaning                                                         |
+|------------+-------------------+----------+-----------------------------------------------------------------|
+| ~graph~    | ~GraphDescriptor~ | required | ~id~, ~title~, ~type~ (~line~ / ~stacked~), ~stack_toggle~, ~unit~ |
+| ~window~   | ~TimeWindow~      | required | ~{ start, end, live }~ in Unix seconds                          |
+| ~revision~ | ~number~          | ~0~      | Host configuration revision; a change reloads the window        |
+| ~change~   | ~number~          | ~0~      | Change counter from ~useGraphWatch~; a change fetches a tail    |
+| ~tall~     | ~boolean~         | ~false~  | Taller chart, for a page showing a single graph                 |
+| ~apiBase~  | ~string~          | ~api/~   | URL prefix of the =rrd-ui= API                                  |
+
+Event ~window(start, end)~: the user panned or zoomed the chart (Unix
+seconds).
+
+~apiBase~ is relative by default, so the host works at ~/~ and behind
+a reverse-proxy prefix.  Never pass an absolute ~/api/~.
+
+* Other exports
+
+- ~TimeSeriesChart~: the chart alone (~data~, ~window~, ~tall~,
+  ~stacked~ props; ~window~ and ~ready~ events).
+- ~useGraphScheduler(order)~, ~GRAPH_SCHEDULER~, ~admitted~,
+  ~PRELOAD_COUNT~: visible-first admission.
+- ~useGraphWatch(ids, window, now, { apiBase })~: one ~api/watch~
+  subscription for the displayed set; returns per-graph change
+  counters.
+- ~fetchGraph~, ~parseGraph~, ~parseGraphDescriptor~,
+  ~parseWatchSnapshot~, ~parseGraphChange~, ~requestJson~, ~apiUrl~ and
+  the ~expect*~ validators.  Also available without Vue from
+  ~@0k/rrd-graph/api~.
+- ~tailRange~, ~mergeTail~, ~toTimeSeries~, ~samplePoints~, ~isStale~,
+  ~formatValue~, ~formatDate~.
+
+* Styling
+:PROPERTIES:
+:CUSTOM_ID: styling
+:END:
+
+~style.css~ lays out the card and the chart.  Colours are custom
+properties with light defaults; map them to the host theme:
+
+#+begin_src css
+:root {
+  --rrd-graph-placeholder-background: var(--c-bg);
+  --rrd-graph-muted: var(--c-text-muted);
+  --rrd-graph-accent: var(--c-accent);
+  --rrd-graph-accent-soft: var(--c-accent-soft);
+  --rrd-graph-danger: var(--c-danger);
+  --rrd-graph-danger-soft: var(--c-danger-soft);
+  --rrd-graph-radius: var(--radius-sm);
+  --rrd-graph-small-font-size: var(--fs-small);
+}
+#+end_src
+
+The card frame uses host classes: ~section~, ~section__head~,
+~section__note~, ~error-banner~, ~muted~, and the host's ~button~
+style.  ~.graph-card~ overrides the ~.section~ padding, hence the load
+order above.
+
+* Development
+
+#+begin_src sh
+npm install
+npm test            # node --test, source modules
+npm run typecheck
+npm run build       # dist/: ES modules, style.css, declarations
+npm run test:package
+npm run check       # all of the above
+#+end_src
+
+* License
+
+MIT
