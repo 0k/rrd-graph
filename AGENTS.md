@@ -28,8 +28,9 @@ period selection, configuration status and page layout.
 - Keep `test/acceptance-ledger.org` in sync with requirements and tests.
 - Consumers depend on a published release; local path dependencies used
   to test unreleased changes are never committed in consumers.
-- `@0k/kal-sse-client` is a vendored tarball (`vendor/`), not published
-  on npm: settle how it is shipped before publishing this package.
+- `@0k/kal-sse-client` is a published npm dependency (`^0.2.0`); its
+  sibling checkout is used locally through an uncommitted `file:`
+  dependency, never committed.
 - `README.md` is generated from `README.org`; never commit it.
 
 ## Build / test

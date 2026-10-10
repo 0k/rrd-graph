@@ -26,7 +26,7 @@
   },
   "peerDependencies": { "vue": "^3.5.12" },
   "dependencies": {
-    "@0k/kal-sse-client": "file:vendor/0k-kal-sse-client-0.1.0.tgz",
+    "@0k/kal-sse-client": "^0.2.0",
     "@0k/time-chart": "^0.1.2"
   },
   "devDependencies": {
