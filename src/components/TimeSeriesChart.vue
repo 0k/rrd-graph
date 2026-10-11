@@ -57,8 +57,10 @@ function create(el: HTMLElement, data: GraphData, stacked: boolean): TimeChart {
     formatValue: v => formatValue(v, unit),
     tooltip: 'axis',
     link: LINK,
-    // Same legend width everywhere so linked charts' plots line up.
-    legend: { width: 300 },
+    // The legend fits the widest label (ellipsized past time-chart's
+    // maxWidth), leaving the rest to the plot.  Through `link`, every
+    // mounted chart takes the widest legend among them, so plots line up.
+    legend: { width: 'auto' },
     onWindowChange: (start, end) => emit('window', Math.floor(start / 1000), Math.ceil(end / 1000)),
   })
 }

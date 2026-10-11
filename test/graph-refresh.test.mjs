@@ -42,14 +42,14 @@ const { useGraphWatch } = await loadTs('../src/composables/useGraphWatch.ts', {
 })
 // Like time-chart, it validates series on create and setSeries: a series
 // labelled "bad" is rejected.
-const timeChartModule = moduleUrl(`export const calls = []
+const timeChartModule = moduleUrl(`export const calls = [], options = []
   function validate(series) { if (series.some(s => s.id === 'bad')) throw new Error('Invalid band bounds: bad') }
   export function createTimeChart(el, option) {
     validate(option.series)
-    calls.push('create')
+    calls.push('create'); options.push(option)
     return { destroy() { calls.push('destroy') }, setSeries(series) { validate(series); calls.push('setSeries') }, setWindow() {}, getWindow() { return { start: 0, end: 1000000 } } }
   }`)
-const { calls: chartCalls } = await import(timeChartModule)
+const { calls: chartCalls, options: chartOptions } = await import(timeChartModule)
 const { descriptor: chartDescriptor } = parse(await source('../src/components/TimeSeriesChart.vue'))
 const chartScript = compileScript(chartDescriptor, { id: 'time-chart-test', inlineTemplate: true })
 const { default: TimeSeriesChart } = await import(moduleUrl(chartScript.content, {
@@ -163,6 +163,28 @@ test('data the chart rejects emits error instead of ready, and later valid data 
   data.value = series('good'); await nextTick(); paint()
   assert.deepEqual(chartCalls, ['create', 'setSeries'])
   assert.deepEqual(events.slice(3), ['ready'])
+})
+
+test('linked charts fit their legends to their labels and align their plots', t => {
+  const previous = { requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame }
+  Object.assign(globalThis, { requestAnimationFrame: () => 1, cancelAnimationFrame: () => {} })
+  chartOptions.length = 0
+  const app = renderer.createApp({ render: () => h(TimeSeriesChart, {
+    data: { start: 0, step: 100, len: 1, series: [{ label: 's', avg: [1] }], unit: null },
+    window: { start: 0, end: 1000, live: true }, tall: false, stacked: false,
+  }) })
+  app.mount(node())
+  t.after(() => {
+    app.unmount()
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
+  })
+  // time-chart sizes 'auto' legends to the widest label and gives every
+  // chart of one link key the widest column of the group.
+  assert.equal(chartOptions[0].link, 'rrd-graph')
+  assert.deepEqual(chartOptions[0].legend, { width: 'auto' })
 })
 
 // `base` is passed to the card and the watch as `apiBase`; `path` is where the

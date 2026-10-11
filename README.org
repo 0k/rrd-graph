@@ -4,7 +4,9 @@ Vue 3 graph card for the time series served by =rrd-ui=
 (~api/graph~, ~api/watch~).  One card fetches and draws one graph,
 keeps its data while a new window loads, follows file changes with
 small tail requests, and reports user pan/zoom so linked charts move
-together.  Several cards on a page share one scheduler: visible cards
+together.  A chart's legend is as wide as its longest label (up to 240
+pixels, longer labels are ellipsized), and the charts of a page share
+the widest legend so their plots line up.  Several cards on a page share one scheduler: visible cards
 load first, then the next four below are prefetched.
 
 The package knows nothing about the =rrd-ui= tree, routing or period

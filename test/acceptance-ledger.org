@@ -26,6 +26,7 @@ changes.
 | Card load/tail/abort/visibility/watch semantics unchanged                | ~graph-refresh.test.mjs~ (all cases moved from =rrd-ui=)              |
 | One card works without an injected scheduler or tree knowledge           | ~graph-refresh.test.mjs~ "standalone card"                            |
 | Linked charts share one link key                                         | ~contracts.test.mjs~                                                  |
+| Legends fit their labels; linked charts share the widest legend width   | ~graph-refresh.test.mjs~ "linked charts fit their legends"; =rrd-ui= Playwright check of aligned plots |
 | Value formatting (IEC bytes, SI units)                                   | ~format.test.mjs~                                                     |
 | Graph card CSS ships with the package, themable by custom properties     | ~contracts.test.mjs~ style test, ~dist.check.mjs~ style.css export  |
 | Host (=rrd-ui=) keeps no copy of graph logic and imports the package     | =rrd-ui= ~frontend/test/contracts.test.mjs~                           |
