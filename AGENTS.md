@@ -28,9 +28,16 @@ period selection, configuration status and page layout.
 - Keep `test/acceptance-ledger.org` in sync with requirements and tests.
 - Consumers depend on a published release; local path dependencies used
   to test unreleased changes are never committed in consumers.
-- `@0k/kal-sse-client` is a published npm dependency (`^0.2.0`); its
-  sibling checkout is used locally through an uncommitted `file:`
-  dependency, never committed.
+- `@0k/kal-sse-client` and `@0k/time-chart` are published npm
+  dependencies, committed as plain `^X.Y.Z` ranges.  Develop against
+  unreleased checkouts of them with `npm install --no-save <checkout>…`,
+  which writes neither `package.json` nor `package-lock.json`; redo it
+  after any `npm install` or `npm ci`.  Never put a `file:` or `link:`
+  entry in either file, committed or not.
+- Release with `pkg` from a git tag: `package.json` and
+  `package-lock.json` keep `%%version%%` in git, substituted from the tag
+  in the working tree; never commit the substituted version.  Publish
+  only when asked.
 - `README.md` is generated from `README.org`; never commit it.
 
 ## Build / test

@@ -1,5 +1,6 @@
 node_modules/
 dist/
 /README.md
+/.pkg/
 AGENTS.local.md
 CLAUDE.local.md
