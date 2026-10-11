@@ -10,11 +10,35 @@ export interface GraphDescriptor {
   unit: string | null
 }
 
-export interface GraphSeries {
+export type Dash = 'solid' | 'dashed' | 'dotted'
+export type BandPattern = 'solid' | 'hatch'
+
+/** Drawing keys of a series, set from the graph YAML; absent when unset. */
+export interface SeriesStyle {
+  color?: string
+  dash?: Dash
+  width?: number
+  /** Opacity of the area filled down to the bottom of the y axis. */
+  fill?: number
+  /** Paints the `min`/`max` area. */
+  band?: { pattern: BandPattern; opacity?: number }
+  /** `false`: no line and no tooltip entry (band series). */
+  line?: false
+}
+
+export interface GraphSeries extends SeriesStyle {
   label: string
   avg: (number | null)[]
   min?: (number | null)[]
   max?: (number | null)[]
+}
+
+/** `y-axis` of the graph YAML. */
+export interface GraphYAxis {
+  min?: number
+  max?: number
+  interval?: number
+  minor_interval?: number
 }
 
 /** One `api/graph` response: series on a common time grid (Unix seconds). */
@@ -29,6 +53,7 @@ export interface GraphData {
   series: GraphSeries[]
   last_update: number | null
   notes: string[]
+  y_axis?: GraphYAxis
 }
 
 /** Displayed time window in Unix seconds; `live` windows slide with the clock. */

@@ -4,6 +4,6 @@ export { GRAPH_SCHEDULER, useGraphScheduler, type GraphScheduler } from './compo
 export { useGraphWatch, type GraphWatchOptions } from './composables/useGraphWatch.js'
 export * from './api.js'
 export { admitted, PRELOAD_COUNT } from './utils/schedule.js'
-export { isStale, mergeTail, samplePoints, tailRange, toTimeSeries } from './utils/chart.js'
+export { isStale, mergeTail, samplePoints, tailRange, toTimeSeries, toYAxis } from './utils/chart.js'
 export { formatDate, formatValue } from './utils/format.js'
-export type { GraphData, GraphDescriptor, GraphResolution, GraphSeries, GraphType, TimeWindow } from './types.js'
+export type { BandPattern, Dash, GraphData, GraphDescriptor, GraphResolution, GraphSeries, GraphType, GraphYAxis, SeriesStyle, TimeWindow } from './types.js'

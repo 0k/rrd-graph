@@ -1,4 +1,4 @@
-import type { TimeSeries } from '@0k/time-chart'
+import type { TimeChartOptions, TimeSeries } from '@0k/time-chart'
 import type { GraphData, GraphSeries, TimeWindow } from '../types.js'
 
 /** Fetch from the real data end, not the grid's null-padded window end. */
@@ -34,10 +34,12 @@ export function mergeTail(held: GraphData, tail: GraphData, windowStart: number)
         if (tailIndex >= 0 && tailIndex < tail.len) return newValues[tailIndex]!
         return oldValues[(time - held.start) / step] ?? null
       })
+    // Drawing keys come from the newest response, like the graph metadata.
+    const { label: _label, avg: _avg, min: _min, max: _max, ...style } = next
     const result: GraphSeries = { label: previous.label, avg: merge(previous.avg, next.avg) }
     if (previous.min && next.min) result.min = merge(previous.min, next.min)
     if (previous.max && next.max) result.max = merge(previous.max, next.max)
-    return result
+    return { ...result, ...style }
   })
   return { ...tail, start, step, len, series }
 }
@@ -55,8 +57,26 @@ export function toTimeSeries(graph: Pick<GraphData, 'start' | 'step' | 'series'>
       series.min = s.min
       series.max = s.max
     }
+    if (s.color !== undefined) series.color = s.color
+    if (s.dash !== undefined) series.dash = s.dash
+    if (s.width !== undefined) series.width = s.width
+    if (s.fill !== undefined) series.fill = s.fill
+    if (s.band !== undefined) series.band = { ...s.band }
+    if (s.line !== undefined) series.line = s.line
     return series
   })
+}
+
+/** The graph's `y_axis` as `@0k/time-chart` `yAxis` options, or undefined. */
+export function toYAxis(graph: Pick<GraphData, 'y_axis'>): TimeChartOptions['yAxis'] {
+  const axis = graph.y_axis
+  if (!axis) return undefined
+  const options: NonNullable<TimeChartOptions['yAxis']> = {}
+  if (axis.min !== undefined) options.min = axis.min
+  if (axis.max !== undefined) options.max = axis.max
+  if (axis.interval !== undefined) options.interval = axis.interval
+  if (axis.minor_interval !== undefined) options.minorInterval = axis.minor_interval
+  return options
 }
 
 export function samplePoints(width: number): number {

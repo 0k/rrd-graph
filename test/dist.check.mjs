@@ -24,7 +24,7 @@ test('built entries export the public API', async () => {
   for (const name of ['GraphCard', 'TimeSeriesChart', 'GRAPH_SCHEDULER', 'useGraphScheduler', 'useGraphWatch',
     'fetchGraph', 'parseGraph', 'parseGraphDescriptor', 'parseWatchSnapshot', 'parseGraphChange', 'requestJson', 'apiUrl',
     'DEFAULT_API_BASE', 'expectObject', 'expectString', 'expectFinite', 'expectBoolean', 'expectArray',
-    'admitted', 'PRELOAD_COUNT', 'isStale', 'mergeTail', 'samplePoints', 'tailRange', 'toTimeSeries', 'formatDate', 'formatValue']) {
+    'admitted', 'PRELOAD_COUNT', 'isStale', 'mergeTail', 'samplePoints', 'tailRange', 'toTimeSeries', 'toYAxis', 'formatDate', 'formatValue']) {
     assert.ok(names.includes(name), `dist/index.js does not export ${name}`)
   }
 })

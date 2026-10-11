@@ -17,6 +17,12 @@ changes.
 | Graph descriptors validate type, stack_toggle and unit, no tree fields   | ~api.test.mjs~ descriptor test, ~contracts.test.mjs~ types test       |
 | Visible-first admission, then four prefetches below                      | ~schedule.test.mjs~, ~graph-scheduler.test.mjs~                       |
 | Tail range, merge and fallback rules                                     | ~chart.test.mjs~                                                      |
+| Drawing keys and ~y_axis~ are validated when present                     | ~api.test.mjs~ "graph responses keep validated drawing keys"          |
+| Data time-chart would reject fails validation, or shows in the error banner | ~api.test.mjs~ labels and minor split; ~graph-refresh.test.mjs~ "data the chart rejects", "a chart error shows" |
+| Drawing keys map onto time-chart series options, only when set           | ~chart.test.mjs~ "drawing keys map onto time-chart series options"    |
+| ~y_axis~ maps onto time-chart ~yAxis~ (~minorInterval~), absent if unset | ~chart.test.mjs~ "the y axis maps snake_case JSON"                    |
+| Tail merges keep the newest series drawing keys                          | ~chart.test.mjs~ "a tail merge keeps the tail series drawing keys"    |
+| Frisquet chart renders fills, dashes, widths, hatch and y ticks          | one-off Playwright check against =rrd-ui= on a copy of the boiler RRD |
 | Card load/tail/abort/visibility/watch semantics unchanged                | ~graph-refresh.test.mjs~ (all cases moved from =rrd-ui=)              |
 | One card works without an injected scheduler or tree knowledge           | ~graph-refresh.test.mjs~ "standalone card"                            |
 | Linked charts share one link key                                         | ~contracts.test.mjs~                                                  |

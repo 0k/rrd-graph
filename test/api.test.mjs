@@ -40,6 +40,39 @@ test('valid requests expose server failures, network failures, malformed graph a
   }
 })
 
+test('graph responses keep validated drawing keys and the y axis', async () => {
+  const styled = {
+    ...payload, len: 1, y_axis: { min: 0, interval: 1, minor_interval: 0.5 },
+    series: [
+      { label: 'a', avg: [1], color: 'red', dash: 'dotted', width: 3, fill: 0.2 },
+      { label: 'b', avg: [2], min: [1], max: [2], color: '#000', band: { pattern: 'hatch', opacity: 0.5 }, line: false },
+    ],
+  }
+  const respond = body => fetchGraph('x/y', 10, 20, { points: 100 }, { fetcher: async () => Response.json(body) })
+  assert.deepEqual(await respond(styled), styled)
+  // Same split rule as time-chart: 2 to 99 steps, float quotients tolerated.
+  for (const y_axis of [{ interval: 99, minor_interval: 1 }, { interval: 0.3, minor_interval: 0.1 }]) {
+    assert.deepEqual((await respond({ ...payload, y_axis })).y_axis, y_axis)
+  }
+  const series = extra => ({ ...payload, series: [{ label: 's', avg: [null], ...extra }] })
+  for (const [body, message] of [
+    [series({ color: 1 }), /color must be a string/],
+    [series({ dash: 'wavy' }), /unknown dash/],
+    [series({ width: 0 }), /width must be positive/],
+    [series({ fill: 2 }), /fill must be in \(0, 1\]/],
+    [series({ line: true }), /line must be false/],
+    [series({ band: { pattern: 'hatch' } }), /band needs min and max/],
+    [series({ min: [null], max: [null], band: { pattern: 'dots' } }), /unknown band pattern/],
+    [series({ min: [null], max: [null], band: { pattern: 'solid', opacity: 0 } }), /band opacity must be in \(0, 1\]/],
+    [{ ...payload, y_axis: { interval: 'x' } }, /y_axis.interval must be finite/],
+    [{ ...payload, y_axis: { step: 1 } }, /unknown y_axis key step/],
+    [{ ...payload, y_axis: { interval: 0 } }, /y_axis.interval must be positive/],
+    [{ ...payload, y_axis: { minor_interval: 0.5 } }, /y_axis.minor_interval must divide y_axis.interval/],
+    ...[1, 0.3, 0.01, -0.5].map(minor_interval =>
+      [{ ...payload, y_axis: { interval: 1, minor_interval } }, /y_axis.minor_interval must divide y_axis.interval into 2 to 99 steps/]),
+  ]) await assert.rejects(respond(body), message)
+})
+
 test('watch snapshots and graph changes validate their object and string fields', () => {
   assert.deepEqual(parseWatchSnapshot({ ids: ['a', 'x/y'] }), { ids: ['a', 'x/y'] })
   assert.deepEqual(parseWatchSnapshot({ ids: [] }), { ids: [] })

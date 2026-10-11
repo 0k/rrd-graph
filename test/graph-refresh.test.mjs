@@ -27,21 +27,27 @@ const { default: GraphCard } = await import(moduleUrl(script.content, {
   vue, '../api.js': api, '../utils/chart.js': chart, '../utils/format.js': format,
   '../composables/useGraphScheduler.js': schedulerModule,
   // Same contract as the real chart: `ready` after mount and after each new
-  // `data`; `globalThis.chartLife` records mounts and unmounts.
+  // `data`, or `error` when the chart rejects it (a series labelled
+  // "rejected" here); `globalThis.chartLife` records mounts and unmounts.
   './TimeSeriesChart.vue': moduleUrl(`import { onMounted, onBeforeUnmount, watch } from 'vue'
     export default { props: ['data'], setup(props, { emit }) {
-      onMounted(() => { globalThis.chartLife?.push('mount'); emit('ready') })
-      watch(() => props.data, () => emit('ready'))
+      const draw = () => props.data.series.some(s => s.label === 'rejected') ? emit('error', 'chart rejected the data') : emit('ready')
+      onMounted(() => { globalThis.chartLife?.push('mount'); draw() })
+      watch(() => props.data, draw)
       onBeforeUnmount(() => globalThis.chartLife?.push('unmount'))
       return () => null } }`, { vue }),
 }))
 const { useGraphWatch } = await loadTs('../src/composables/useGraphWatch.ts', {
   vue, '../api.js': api, '@0k/kal-sse-client': import.meta.resolve('@0k/kal-sse-client'),
 })
+// Like time-chart, it validates series on create and setSeries: a series
+// labelled "bad" is rejected.
 const timeChartModule = moduleUrl(`export const calls = []
-  export function createTimeChart() {
+  function validate(series) { if (series.some(s => s.id === 'bad')) throw new Error('Invalid band bounds: bad') }
+  export function createTimeChart(el, option) {
+    validate(option.series)
     calls.push('create')
-    return { destroy() { calls.push('destroy') }, setSeries() {}, setWindow() {}, getWindow() { return { start: 0, end: 1000000 } } }
+    return { destroy() { calls.push('destroy') }, setSeries(series) { validate(series); calls.push('setSeries') }, setWindow() {}, getWindow() { return { start: 0, end: 1000000 } } }
   }`)
 const { calls: chartCalls } = await import(timeChartModule)
 const { descriptor: chartDescriptor } = parse(await source('../src/components/TimeSeriesChart.vue'))
@@ -120,7 +126,43 @@ test('chart ready waits for the frame after mount and after each new data, and t
   second.unmount(); apps.pop()
   assert.equal(frames.size, 0)
   assert.equal(ready, 2)
-  assert.deepEqual(chartCalls, ['create', 'destroy', 'create', 'destroy'])
+  assert.deepEqual(chartCalls, ['create', 'setSeries', 'destroy', 'create', 'destroy'])
+})
+
+test('data the chart rejects emits error instead of ready, and later valid data draws', async t => {
+  const previous = { requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame }
+  const frames = new Map()
+  let nextFrame = 0
+  globalThis.requestAnimationFrame = callback => { frames.set(++nextFrame, callback); return nextFrame }
+  globalThis.cancelAnimationFrame = id => frames.delete(id)
+  chartCalls.length = 0
+  const events = []
+  const series = label => ({ start: 0, step: 100, len: 1, series: [{ label, avg: [1] }], unit: null })
+  const data = ref(series('bad'))
+  const app = renderer.createApp({ render: () => h(TimeSeriesChart, {
+    data: data.value, window: { start: 0, end: 1000, live: true }, tall: false, stacked: false,
+    onReady: () => events.push('ready'), onError: message => events.push(`error: ${message}`),
+  }) })
+  app.mount(node())
+  t.after(() => {
+    app.unmount()
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
+  })
+  const paint = () => { for (const [id, callback] of frames) { frames.delete(id); callback() } }
+  assert.deepEqual(events, ['error: Invalid band bounds: bad'])
+  assert.deepEqual(chartCalls, [])
+  assert.equal(frames.size, 0)
+  data.value = series('good'); await nextTick(); paint()
+  assert.deepEqual(chartCalls, ['create'])
+  assert.deepEqual(events.slice(1), ['ready'])
+  data.value = series('bad'); await nextTick(); paint()
+  assert.deepEqual(events.slice(2), ['error: Invalid band bounds: bad'])
+  data.value = series('good'); await nextTick(); paint()
+  assert.deepEqual(chartCalls, ['create', 'setSeries'])
+  assert.deepEqual(events.slice(3), ['ready'])
 })
 
 // `base` is passed to the card and the watch as `apiBase`; `path` is where the
@@ -501,6 +543,22 @@ test('incompatible tail logs its fallback and performs a full reload', async t =
   assert.equal(messages.length, 1)
   assert.match(messages[0][0], /incompatible.*grid, labels or min\/max/)
   s.requests[2].resolve(); await settle()
+})
+
+test('a chart error shows in the error banner and settles the card; Retry draws valid data', async t => {
+  const s = setup(t, { ids: ['a'], defer: true })
+  await settle()
+  s.requests[0].resolve({ ...s.requests[0].data, series: [{ label: 'rejected', avg: s.requests[0].data.series[0].avg }] })
+  await settle()
+  const banner = s.card('a').children.find(el => el.props.role === 'alert')
+  assert.equal(banner.children[0].text, 'chart rejected the data')
+  assert.equal(s.settled.get('a'), true)
+  banner.children[1].props.onClick()
+  await settle()
+  assert.equal(s.settled.get('a'), false)
+  s.requests[1].resolve(); await settle()
+  assert.equal(s.card('a').children.find(el => el.props.role === 'alert'), undefined)
+  assert.equal(s.settled.get('a'), true)
 })
 
 test('tail errors keep the card out of full-loading state and expose Retry', async t => {

@@ -87,13 +87,18 @@ const changes = useGraphWatch(ids, timeWindow, now)
 Event ~window(start, end)~: the user panned or zoomed the chart (Unix
 seconds).
 
+A failed request, or data the chart refuses to draw (for instance a
+point whose ~min~ exceeds its ~max~), shows its message in the card's
+error banner with a Retry button.
+
 ~apiBase~ is relative by default, so the host works at ~/~ and behind
 a reverse-proxy prefix.  Never pass an absolute ~/api/~.
 
 * Other exports
 
 - ~TimeSeriesChart~: the chart alone (~data~, ~window~, ~tall~,
-  ~stacked~ props; ~window~ and ~ready~ events).
+  ~stacked~ props; ~window~, ~ready~ and ~error(message)~ events: ~error~
+  replaces ~ready~ when =@0k/time-chart= rejects the data).
 - ~useGraphScheduler(order)~, ~GRAPH_SCHEDULER~, ~admitted~,
   ~PRELOAD_COUNT~: visible-first admission.
 - ~useGraphWatch(ids, window, now, { apiBase })~: one ~api/watch~
@@ -103,8 +108,33 @@ a reverse-proxy prefix.  Never pass an absolute ~/api/~.
   ~parseWatchSnapshot~, ~parseGraphChange~, ~requestJson~, ~apiUrl~ and
   the ~expect*~ validators.  Also available without Vue from
   ~@0k/rrd-graph/api~.
-- ~tailRange~, ~mergeTail~, ~toTimeSeries~, ~samplePoints~, ~isStale~,
-  ~formatValue~, ~formatDate~.
+- ~tailRange~, ~mergeTail~, ~toTimeSeries~, ~toYAxis~, ~samplePoints~,
+  ~isStale~, ~formatValue~, ~formatDate~.
+
+* Drawing keys
+
+The graph YAML's drawing keys (documented in =kal-rrd-graph='s README,
+"Series entries" and "Y axis") reach the card as optional ~api/graph~
+fields, which ~parseGraph~ validates and the chart passes to
+=@0k/time-chart= unchanged in meaning:
+
+| ~api/graph~ field                 | =@0k/time-chart= option                          |
+|-----------------------------------+--------------------------------------------------|
+| series ~color~                    | ~TimeSeries.color~                               |
+| series ~dash~                     | ~TimeSeries.dash~: ~solid~, ~dashed~ or ~dotted~ |
+| series ~width~                    | ~TimeSeries.width~                               |
+| series ~fill~                     | ~TimeSeries.fill~ (area to the axis bottom)      |
+| series ~band: {pattern, opacity}~ | ~TimeSeries.band~ over ~min~ / ~max~             |
+| series ~line: false~              | ~TimeSeries.line: false~ (no line, no tooltip)   |
+| graph ~y_axis.min~ / ~max~        | ~yAxis.min~ / ~yAxis.max~                        |
+| graph ~y_axis.interval~           | ~yAxis.interval~                                 |
+| graph ~y_axis.minor_interval~     | ~yAxis.minorInterval~                            |
+
+Absent fields set nothing, so unstyled graphs draw as before.  Series
+are drawn in list order.  A tail merge takes the drawing keys of the
+newest response.  The y axis is fixed when a chart is created; a
+changed ~y-axis~ applies the next time the card's chart is created
+(e.g. when it becomes visible again).
 
 * Styling
 :PROPERTIES:

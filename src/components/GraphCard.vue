@@ -30,6 +30,8 @@ const admitted = computed(() => scheduler.isAdmitted(props.graph.id))
 const host = ref<HTMLElement | null>(null)
 const data = ref<GraphData | null>(null)
 const error = ref<string | null>(null)
+/** Why the chart rejected the held data; cleared once it draws again. */
+const chartError = ref<string | null>(null)
 const loading = ref(false)
 const tailLoading = ref(false)
 const needsLoad = ref(true)
@@ -183,7 +185,7 @@ watch(() => props.graph.type, t => { stacked.value = t === 'stacked' })
 watch(admitted, pump)
 watch(visible, value => { if (!value) chartReady.value = false }, { flush: 'sync' })
 const settled = computed(() => !needsLoad.value && !loading.value && !tailLoading.value
-  && Boolean(error.value || (data.value && (data.value.series.length === 0 || chartReady.value))))
+  && Boolean(error.value || chartError.value || (data.value && (data.value.series.length === 0 || chartReady.value))))
 watch(settled, value => scheduler.setSettled(props.graph.id, value), { flush: 'sync' })
 onBeforeUnmount(() => { active = false; scheduler.unregister(props.graph.id); request?.abort(); tailRequest?.abort(); observer?.disconnect(); if (resizeTimer) clearTimeout(resizeTimer) })
 const stale = computed(() => data.value && isStale(data.value.last_update, data.value.step, props.window.end, props.window.live))
@@ -200,11 +202,11 @@ const stale = computed(() => data.value && isStale(data.value.last_update, data.
         <button type="button" :aria-pressed="!stacked" data-layout="lines" @click="stacked = false">Lines</button>
       </div>
     </header>
-    <div v-if="error" class="error-banner" role="alert"><span>{{ error }}</span><button @click="load">Retry</button></div>
-    <TimeSeriesChart v-if="data && visible" v-show="data.series.length > 0" :data="data" :window="window" :tall="tall" :stacked="stacked" @ready="chartReady = true" @vue:unmounted="chartReady = false" @window="(s, e) => emit('window', s, e)" />
+    <div v-if="error || chartError" class="error-banner" role="alert"><span>{{ error ?? chartError }}</span><button @click="load">Retry</button></div>
+    <TimeSeriesChart v-if="data && visible" v-show="data.series.length > 0" :data="data" :window="window" :tall="tall" :stacked="stacked" @ready="chartReady = true; chartError = null" @error="message => chartError = message" @vue:unmounted="chartReady = false; chartError = null" @window="(s, e) => emit('window', s, e)" />
     <div v-if="data && data.series.length === 0" class="no-data" data-testid="no-data"><strong>No data</strong><p v-for="note in data.notes" :key="note">{{ note }}</p></div>
     <ul v-else-if="data?.notes.length" class="section__note"><li v-for="note in data.notes" :key="note">{{ note }}</li></ul>
-    <div v-if="!(data && visible) && !(data && data.series.length === 0) && !error" class="chart-placeholder" :class="{ 'chart-placeholder--tall': tall }" aria-hidden="true"></div>
+    <div v-if="!(data && visible) && !(data && data.series.length === 0) && !error && !chartError" class="chart-placeholder" :class="{ 'chart-placeholder--tall': tall }" aria-hidden="true"></div>
   </article>
 </template>
 

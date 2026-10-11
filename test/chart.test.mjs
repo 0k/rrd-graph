@@ -1,13 +1,45 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadTs } from './load-ts.mjs'
-const { toTimeSeries, samplePoints, isStale, mergeTail, tailRange } = await loadTs('../src/utils/chart.ts')
+const { toTimeSeries, toYAxis, samplePoints, isStale, mergeTail, tailRange } = await loadTs('../src/utils/chart.ts')
 
 test('graph data becomes millisecond series with gaps, stacking and bands', () => {
   const graph = { start: 100, step: 60, series: [{ label: 'a', avg: [2, null], min: [1, null], max: [3, null] }] }
   const expected = { id: 'a', label: 'a', points: [[100000, 2], [160000, null]], min: [1, null], max: [3, null] }
   assert.deepEqual(toTimeSeries(graph, true), [{ ...expected, stack: true }])
   assert.deepEqual(toTimeSeries(graph, false), [{ ...expected, stack: false }])
+})
+
+test('drawing keys map onto time-chart series options and only when set', () => {
+  const graph = { start: 0, step: 1, series: [
+    { label: 'conf', avg: [19], color: '#ffff00', fill: 0.1 },
+    { label: 'sel', avg: [20], color: 'red', dash: 'dotted', width: 3 },
+    { label: 'chauffe', avg: [20], min: [18], max: [20], color: 'red', band: { pattern: 'hatch', opacity: 0.5 }, line: false },
+    { label: 'plain band', avg: [2], min: [1], max: [2], band: { pattern: 'solid' }, line: false },
+  ] }
+  const point = (label, v) => ({ id: label, label, points: [[0, v]], stack: false })
+  assert.deepEqual(toTimeSeries(graph, false), [
+    { ...point('conf', 19), color: '#ffff00', fill: 0.1 },
+    { ...point('sel', 20), color: 'red', dash: 'dotted', width: 3 },
+    { ...point('chauffe', 20), min: [18], max: [20], color: 'red', band: { pattern: 'hatch', opacity: 0.5 }, line: false },
+    { ...point('plain band', 2), min: [1], max: [2], band: { pattern: 'solid' }, line: false },
+  ])
+})
+
+test('the y axis maps snake_case JSON onto time-chart options and is absent when unset', () => {
+  assert.equal(toYAxis({}), undefined)
+  assert.deepEqual(toYAxis({ y_axis: { interval: 1, minor_interval: 0.5 } }), { interval: 1, minorInterval: 0.5 })
+  assert.deepEqual(toYAxis({ y_axis: { min: 0, max: 30 } }), { min: 0, max: 30 })
+})
+
+test('a tail merge keeps the tail series drawing keys', () => {
+  const style = { color: 'red', band: { pattern: 'hatch' }, line: false }
+  const held = grid(0, [{ label: 'a', avg: [1, 2], min: [0, 1], max: [1, 2], ...style }], { y_axis: { interval: 1 } })
+  const tail = grid(10, [{ label: 'a', avg: [3], min: [2], max: [3], ...style }], { y_axis: { interval: 1 } })
+  assert.deepEqual(mergeTail(held, tail, 0), {
+    ...tail, start: 0, len: 2,
+    series: [{ label: 'a', avg: [1, 3], min: [0, 2], max: [1, 3], ...style }],
+  })
 })
 
 function grid(start, series, metadata = {}) {
