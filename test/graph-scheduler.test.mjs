@@ -1,13 +1,7 @@
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
 import { effectScope, ref } from 'vue'
-import { loadTs, moduleUrl } from './load-ts.mjs'
-
-const schedule = moduleUrl(await readFile(new URL('../src/utils/schedule.ts', import.meta.url), 'utf8'))
-const { useGraphScheduler } = await loadTs('../src/composables/useGraphScheduler.ts', {
-  vue: import.meta.resolve('vue'), '../utils/schedule.js': schedule,
-})
+import { useGraphScheduler } from '../src/composables/useGraphScheduler.ts'
 
 // Acceptance ledger: one exact-viewport observer, reactive admission opens only
 // after all visible cards settle, removed targets cannot resurrect visibility,
@@ -25,7 +19,7 @@ test('one observer owns registration, settlement, order changes and scope cleanu
     disconnect() { this.disconnected = true; this.targets.clear() }
   }
   const scope = effectScope()
-  t.after(() => {
+  t.onTestFinished(() => {
     scope.stop()
     if (previous === undefined) delete globalThis.IntersectionObserver
     else globalThis.IntersectionObserver = previous

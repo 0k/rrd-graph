@@ -1,7 +1,6 @@
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { loadTs } from './load-ts.mjs'
-const { fetchGraph, parseGraphDescriptor, parseWatchSnapshot, parseGraphChange, requestJson, apiUrl, DEFAULT_API_BASE } = await loadTs('../src/api.ts')
+import { fetchGraph, parseGraphDescriptor, parseWatchSnapshot, parseGraphChange, requestJson, apiUrl, DEFAULT_API_BASE } from '../src/api.ts'
 const payload = { id: 'x/y', title: 'Y', type: 'line', unit: null, start: 10, step: 5, len: 1, series: [{ label: 's', avg: [null] }], last_update: null, notes: [] }
 
 test('graph requests are relative to the default api/ base and encode query parameters', async () => {

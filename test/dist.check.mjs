@@ -1,5 +1,5 @@
 // Built-artifact contract; run after `npm run build` (npm run test:package).
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { access, readdir, readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'

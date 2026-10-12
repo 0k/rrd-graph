@@ -1,9 +1,15 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  test: {
+    environment: process.env.RRD_GRAPH_PACKAGE_TEST === '1' ? 'node' : './test/vue-node.mjs',
+    include: process.env.RRD_GRAPH_PACKAGE_TEST === '1' ? ['test/dist.check.mjs'] : ['test/*.test.mjs'],
+    // Built API imports must exercise Node's loader, not Vite's transforms.
+    server: { deps: { external: [/\/dist\/api\.js$/, '@0k/rrd-graph/api'] } },
+  },
   build: {
     target: 'es2020',
     lib: {

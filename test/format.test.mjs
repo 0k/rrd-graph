@@ -1,7 +1,6 @@
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { loadTs } from './load-ts.mjs'
-const { formatValue } = await loadTs('../src/utils/format.ts')
+import { formatValue } from '../src/utils/format.ts'
 
 test('values use IEC for bytes and bytes/s, including negative and zero', () => {
   for (const [value, unit, expected] of [

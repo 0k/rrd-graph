@@ -1,10 +1,9 @@
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { loadTs } from './load-ts.mjs'
+import { admitted, PRELOAD_COUNT } from '../src/utils/schedule.ts'
 
 // Acceptance ledger: admission waits for every visible card, stays bounded
 // below the last visible index, ignores unknown ids, and stops at list end.
-const { admitted, PRELOAD_COUNT } = await loadTs('../src/utils/schedule.ts')
 const order = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 const result = (visible, settled, ids = order) =>
   [...admitted(ids, new Set(visible), new Set(settled))].sort()

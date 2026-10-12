@@ -1,7 +1,6 @@
-import test from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { loadTs } from './load-ts.mjs'
-const { toTimeSeries, toYAxis, samplePoints, isStale, mergeTail, tailRange } = await loadTs('../src/utils/chart.ts')
+import { toTimeSeries, toYAxis, samplePoints, isStale, mergeTail, tailRange } from '../src/utils/chart.ts'
 
 test('graph data becomes millisecond series with gaps, stacking and bands', () => {
   const graph = { start: 100, step: 60, series: [{ label: 'a', avg: [2, null], min: [1, null], max: [3, null] }] }

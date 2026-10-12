@@ -17,7 +17,8 @@ period selection, configuration status and page layout.
 - Scheduler, tail and refresh semantics are specified by
   `test/graph-refresh.test.mjs`, `test/graph-scheduler.test.mjs`,
   `test/schedule.test.mjs` and `test/chart.test.mjs`.  Change the
-  specification first, then the code.
+  specification first, then the code.  Tests run with Vitest and import
+  source modules through Vite and its Vue plugin; keep these filenames.
 - `src/api.ts` stays framework-free: it is also the `@0k/rrd-graph/api`
   entry, importable without Vue.
 - `vue` is a peer and, like `@0k/time-chart` and `@0k/kal-sse-client`,
@@ -44,5 +45,7 @@ period selection, configuration status and page layout.
 
 ```sh
 npm install
+npm test         # Vitest source tests; excludes test/dist.check.mjs
+npm run test:package # Vitest built-artifact checks; run after build
 npm run check    # test, typecheck, build, test:package
 ```

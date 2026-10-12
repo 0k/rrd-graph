@@ -1,9 +1,8 @@
-import test from 'node:test'
+import { test, vi } from 'vitest'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { parse, compileScript } from '@vue/compiler-sfc'
-import { createRenderer, computed, h, nextTick, ref, toRaw } from 'vue'
-import { loadTs, moduleUrl } from './load-ts.mjs'
+import { createRenderer, computed, h, nextTick, onMounted, onBeforeUnmount, ref, toRaw, watch } from 'vue'
+import { GRAPH_SCHEDULER } from '../src/composables/useGraphScheduler.ts'
+import { useGraphWatch } from '../src/composables/useGraphWatch.ts'
 
 // Acceptance ledger: these tests execute the production Vue watchers and SSE
 // library. A/B isolation, burst deduplication, snapshot healing, subscription
@@ -11,50 +10,31 @@ import { loadTs, moduleUrl } from './load-ts.mjs'
 // configurable relative API base and a standalone card without an injected
 // scheduler each have assertions below; api.test and chart.test cover
 // validation and merge rules (see acceptance-ledger.org).
-const source = path => readFile(new URL(path, import.meta.url), 'utf8')
-const vue = import.meta.resolve('vue')
-const api = moduleUrl(await source('../src/api.ts'))
-const chart = moduleUrl(await source('../src/utils/chart.ts'))
-const format = moduleUrl(await source('../src/utils/format.ts'))
-const schedule = moduleUrl(await source('../src/utils/schedule.ts'))
-const schedulerModule = moduleUrl(await source('../src/composables/useGraphScheduler.ts'), {
-  vue, '../utils/schedule.js': schedule,
-})
-const { GRAPH_SCHEDULER } = await import(schedulerModule)
-const { descriptor } = parse(await source('../src/components/GraphCard.vue'))
-const script = compileScript(descriptor, { id: 'graph-card-test', inlineTemplate: true })
-const { default: GraphCard } = await import(moduleUrl(script.content, {
-  vue, '../api.js': api, '../utils/chart.js': chart, '../utils/format.js': format,
-  '../composables/useGraphScheduler.js': schedulerModule,
-  // Same contract as the real chart: `ready` after mount and after each new
-  // `data`, or `error` when the chart rejects it (a series labelled
-  // "rejected" here); `globalThis.chartLife` records mounts and unmounts.
-  './TimeSeriesChart.vue': moduleUrl(`import { onMounted, onBeforeUnmount, watch } from 'vue'
-    export default { props: ['data'], setup(props, { emit }) {
-      const draw = () => props.data.series.some(s => s.label === 'rejected') ? emit('error', 'chart rejected the data') : emit('ready')
-      onMounted(() => { globalThis.chartLife?.push('mount'); draw() })
-      watch(() => props.data, draw)
-      onBeforeUnmount(() => globalThis.chartLife?.push('unmount'))
-      return () => null } }`, { vue }),
-}))
-const { useGraphWatch } = await loadTs('../src/composables/useGraphWatch.ts', {
-  vue, '../api.js': api, '@0k/kal-sse-client': import.meta.resolve('@0k/kal-sse-client'),
-})
 // Like time-chart, it validates series on create and setSeries: a series
 // labelled "bad" is rejected.
-const timeChartModule = moduleUrl(`export const calls = [], options = []
+const chartCalls = [], chartOptions = []
+vi.doMock('@0k/time-chart', () => {
   function validate(series) { if (series.some(s => s.id === 'bad')) throw new Error('Invalid band bounds: bad') }
-  export function createTimeChart(el, option) {
+  return { createTimeChart(el, option) {
     validate(option.series)
-    calls.push('create'); options.push(option)
-    return { destroy() { calls.push('destroy') }, setSeries(series) { validate(series); calls.push('setSeries') }, setWindow() {}, getWindow() { return { start: 0, end: 1000000 } } }
-  }`)
-const { calls: chartCalls, options: chartOptions } = await import(timeChartModule)
-const { descriptor: chartDescriptor } = parse(await source('../src/components/TimeSeriesChart.vue'))
-const chartScript = compileScript(chartDescriptor, { id: 'time-chart-test', inlineTemplate: true })
-const { default: TimeSeriesChart } = await import(moduleUrl(chartScript.content, {
-  vue, '@0k/time-chart': timeChartModule, '../utils/chart.js': chart, '../utils/format.js': format,
+    chartCalls.push('create'); chartOptions.push(option)
+    return { destroy() { chartCalls.push('destroy') }, setSeries(series) { validate(series); chartCalls.push('setSeries') }, setWindow() {}, getWindow() { return { start: 0, end: 1000000 } } }
+  } }
+})
+const { default: TimeSeriesChart } = await import('../src/components/TimeSeriesChart.vue')
+// Load the real chart first; only GraphCard receives the component stub.
+// Same contract as the real chart: `ready` after mount and after each new
+// `data`, or `error` when the chart rejects it (a series labelled
+// "rejected" here); `globalThis.chartLife` records mounts and unmounts.
+vi.doMock('../src/components/TimeSeriesChart.vue', () => ({
+  default: { props: ['data'], setup(props, { emit }) {
+    const draw = () => props.data.series.some(s => s.label === 'rejected') ? emit('error', 'chart rejected the data') : emit('ready')
+    onMounted(() => { globalThis.chartLife?.push('mount'); draw() })
+    watch(() => props.data, draw)
+    onBeforeUnmount(() => globalThis.chartLife?.push('unmount'))
+    return () => null } },
 }))
+const { default: GraphCard } = await import('../src/components/GraphCard.vue')
 
 function node(type = 'root') { return { type, children: [], props: {}, parent: null, clientWidth: 612 } }
 const renderer = createRenderer({
@@ -87,7 +67,7 @@ test('chart ready waits for the frame after mount and after each new data, and t
   globalThis.requestAnimationFrame = callback => { frames.set(++nextFrame, callback); return nextFrame }
   globalThis.cancelAnimationFrame = id => frames.delete(id)
   const apps = []
-  t.after(() => {
+  t.onTestFinished(() => {
     for (const app of apps) app.unmount()
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete globalThis[key]
@@ -144,7 +124,7 @@ test('data the chart rejects emits error instead of ready, and later valid data 
     onReady: () => events.push('ready'), onError: message => events.push(`error: ${message}`),
   }) })
   app.mount(node())
-  t.after(() => {
+  t.onTestFinished(() => {
     app.unmount()
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete globalThis[key]
@@ -174,7 +154,7 @@ test('linked charts fit their legends to their labels and align their plots', t 
     window: { start: 0, end: 1000, live: true }, tall: false, stacked: false,
   }) })
   app.mount(node())
-  t.after(() => {
+  t.onTestFinished(() => {
     app.unmount()
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete globalThis[key]
@@ -190,13 +170,13 @@ test('linked charts fit their legends to their labels and align their plots', t 
 // `base` is passed to the card and the watch as `apiBase`; `path` is where the
 // requests must land.  Omitting `base` exercises the default (`api/`).
 function setup(t, { ids = ['a', 'b'], defer = false, snapshotFailure = false, admit = true, window = { start: 0, end: 1000, live: true }, base, path = '/prefix/api/', inject = true, graph = id => ({ kind: 'graph', type: 'line', unit: null, stack_toggle: true, id, title: id }) } = {}) {
-  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1000000 })
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'], now: 1000000 })
   const streams = []
   const requests = []
   const snapshots = []
   const observers = []
   const intersections = []
-  t.mock.method(globalThis, 'fetch', async (url, options) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
     const query = new URL(url, 'http://localhost/prefix/')
     if (query.pathname === `${path}watch`) {
       snapshots.push(query)
@@ -275,15 +255,15 @@ function setup(t, { ids = ['a', 'b'], defer = false, snapshotFailure = false, ad
   app.mount(root)
   let mounted = true
   function unmount() { if (mounted) { app.unmount(); mounted = false } }
-  t.after(() => { unmount(); for (const [key, value] of Object.entries(globals)) {
+  t.onTestFinished(() => { unmount(); for (const [key, value] of Object.entries(globals)) {
     if (value === undefined) delete globalThis[key]
     else globalThis[key] = value
-  } })
+  } vi.restoreAllMocks(); vi.useRealTimers() })
   function card(id) {
     return root.children[0].children.find(el => el.props['data-graph-id'] === id)
   }
   function event(id) { streams.at(-1).onmessage({ data: JSON.stringify({ id }) }) }
-  async function flush() { t.mock.timers.tick(250); await settle() }
+  async function flush() { vi.advanceTimersByTime(250); await settle() }
   return { requests, snapshots, streams, observers, intersections, displayed, now, fixed, span, revision, graphIds, timeWindow, card, event, flush, unmount, admission, visibility, registered, settled, get changes() { return changes.value } }
 }
 
@@ -356,7 +336,7 @@ test('visibility releases chart readiness, not held data; re-entry never refetch
 test('a visible card keeps its chart and held data while a new window loads, and settles on the new data', async t => {
   const s = setup(t, { ids: ['a'], defer: true })
   globalThis.chartLife = []
-  t.after(() => { delete globalThis.chartLife })
+  t.onTestFinished(() => { delete globalThis.chartLife })
   await settle()
   s.requests[0].resolve()
   await settle()
@@ -384,7 +364,7 @@ test('revision, points and graph identity invalidate hidden requests without eag
   assert.equal(s.requests[0].signal.aborted, true)
   s.card('a').clientWidth = 1012
   s.observers[0].callback()
-  t.mock.timers.tick(200)
+  vi.advanceTimersByTime(200)
   await settle()
   s.graphIds.value = { a: 'renamed' }
   await settle()
@@ -426,7 +406,7 @@ test('graph A burst slides every live window, but only A sends exactly one step 
   await settle()
   assert.equal(s.requests.length, 2)
   assert.equal(s.snapshots[0].href, 'http://localhost/prefix/api/watch?id=a&id=b')
-  t.mock.timers.tick(10000)
+  vi.advanceTimersByTime(10000)
   s.event('a'); s.event('a'); s.event('other-client')
   assert.equal(s.requests.length, 2)
   await s.flush()
@@ -538,7 +518,7 @@ test('zoom, past pan, resize and revision require full loads; even a long live s
   await settle()
   s.card('a').clientWidth = 1012
   s.observers[0].callback()
-  t.mock.timers.tick(200)
+  vi.advanceTimersByTime(200)
   await settle()
   s.revision.value++
   await settle()
@@ -554,7 +534,7 @@ test('zoom, past pan, resize and revision require full loads; even a long live s
 test('incompatible tail logs its fallback and performs a full reload', async t => {
   const s = setup(t, { ids: ['a'], defer: true })
   const messages = []
-  t.mock.method(console, 'info', (...args) => messages.push(args))
+  vi.spyOn(console, 'info').mockImplementation((...args) => messages.push(args))
   await settle()
   s.requests[0].resolve(); await settle()
   s.event('a'); await s.flush()
@@ -612,7 +592,7 @@ test('empty displayed set and historical window have no channel; fixed future de
   await settle()
   assert.equal(s.snapshots.length, 1)
   const count = s.requests.length
-  t.mock.timers.tick(1000)
+  vi.advanceTimersByTime(1000)
   await settle()
   assert.equal(s.streams[0].closed, true)
   assert.equal(s.requests.length, count)
@@ -642,7 +622,7 @@ test('pure live slide sends no request; tail with a huge held-data gap falls bac
   s.now.value = 1099
   await settle()
   assert.equal(s.requests.length, 1)
-  t.mock.timers.tick(101000)
+  vi.advanceTimersByTime(101000)
   s.event('a'); await s.flush()
   assert.equal(s.requests.length, 2)
   assert.equal(s.requests[1].query.searchParams.get('points'), '100')
@@ -659,7 +639,7 @@ test('stale null-padded top graph catches up from last_update and keeps its full
     series: labels.map(label => ({ label, avg: [1, 1, 1, 1, 1, 1, null, null, null, null, null] })),
   })
   await settle()
-  t.mock.timers.tick(10000)
+  vi.advanceTimersByTime(10000)
   s.event('a'); await s.flush()
   assert.equal(s.requests.length, 2)
   const query = s.requests[1].query.searchParams
@@ -692,7 +672,7 @@ test('no held update requires exactly one full load when files appear', async t 
 
 test('snapshot errors are reported and retried; malformed messages do not refresh any graph', async t => {
   const errors = []
-  t.mock.method(console, 'error', (...args) => errors.push(args))
+  vi.spyOn(console, 'error').mockImplementation((...args) => errors.push(args))
   const s = setup(t, { snapshotFailure: true })
   await settle()
   assert.equal(errors.length, 1)

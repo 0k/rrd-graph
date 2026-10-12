@@ -168,10 +168,10 @@ order above.
 
 #+begin_src sh
 npm install
-npm test            # node --test, source modules
+npm test            # vitest run, source modules
 npm run typecheck
 npm run build       # dist/: ES modules, style.css, declarations
-npm run test:package
+npm run test:package # Vitest built-artifact checks (after build)
 npm run check       # all of the above
 #+end_src
 
