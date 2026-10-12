@@ -1,6 +1,6 @@
-// Client side of the rrd-ui graph HTTP contract: validated `api/graph`
+// Client side of the kal-rrd-graph HTTP contract: validated `api/graph`
 // responses, graph watch events, and the JSON primitives hosts reuse to
-// validate their own rrd-ui responses.  Framework-free.
+// validate their own kal-rrd-graph responses.  Framework-free.
 import type { GraphData, GraphDescriptor, GraphResolution, GraphSeries, GraphType, GraphYAxis, SeriesStyle } from './types.js'
 
 export type Fetcher = typeof fetch
@@ -14,7 +14,7 @@ export interface RequestOptions {
 }
 
 export interface GraphRequestOptions extends RequestOptions {
-  /** URL prefix of the rrd-ui API, default `api/`. */
+  /** URL prefix of the kal-rrd-graph API, default `api/`. */
   base?: string
 }
 

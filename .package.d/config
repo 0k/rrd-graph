@@ -1,5 +1,5 @@
 NAME="@0k/rrd-graph"
-DESCRIPTION="Vue 3 graph card for rrd-ui time series: visible-first loading, live tails and linked pan/zoom."
+DESCRIPTION="Vue 3 graph card for kal-rrd-graph time series: visible-first loading, live tails and linked pan/zoom."
 EMAIL="valentin.lab@kalysto.org"
 AUTHOR="Valentin Lab"
 AUTHOR_EMAIL="$AUTHOR <$EMAIL>"

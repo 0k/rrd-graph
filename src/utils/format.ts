@@ -1,4 +1,4 @@
-// Shared value formatting of rrd-ui graphs (originally adapted from logchunk-web).
+// Shared value formatting of graph values.
 const numeric = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 3, useGrouping: false })
 
 export function formatValue(value: number | null, unit: string | null): string {

@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<{
   /** Per-graph change counter (see `useGraphWatch`): a change fetches a tail. */
   change?: number
   tall?: boolean
-  /** URL prefix of the rrd-ui API; relative so prefixed deployments work. */
+  /** URL prefix of the kal-rrd-graph API; relative so prefixed deployments work. */
   apiBase?: string
 }>(), { revision: 0, change: 0, tall: false, apiBase: DEFAULT_API_BASE })
 const emit = defineEmits<{ window: [start: number, end: number] }>()

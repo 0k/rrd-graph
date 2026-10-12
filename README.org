@@ -1,7 +1,7 @@
 #+title: @0k/rrd-graph
 
-Vue 3 graph card for the time series served by =rrd-ui=
-(~api/graph~, ~api/watch~).  One card fetches and draws one graph,
+Vue 3 graph card for the time series served by the =kal-rrd-graph=
+HTTP API (~api/graph~, ~api/watch~).  One card fetches and draws one graph,
 keeps its data while a new window loads, follows file changes with
 small tail requests, and reports user pan/zoom so linked charts move
 together.  A chart's legend is as wide as its longest label (up to 240
@@ -9,8 +9,8 @@ pixels, longer labels are ellipsized), and the charts of a page share
 the widest legend so their plots line up.  Several cards on a page share one scheduler: visible cards
 load first, then the next four below are prefetched.
 
-The package knows nothing about the =rrd-ui= tree, routing or period
-selection: the host gives each card a graph descriptor and a time
+The package knows nothing about how the host organizes its graphs,
+routing or period selection: the host gives each card a graph descriptor and a time
 window, and decides what a pan/zoom does.
 
 * Installation
@@ -84,7 +84,7 @@ const changes = useGraphWatch(ids, timeWindow, now)
 | ~revision~ | ~number~          | ~0~      | Host configuration revision; a change reloads the window        |
 | ~change~   | ~number~          | ~0~      | Change counter from ~useGraphWatch~; a change fetches a tail    |
 | ~tall~     | ~boolean~         | ~false~  | Taller chart, for a page showing a single graph                 |
-| ~apiBase~  | ~string~          | ~api/~   | URL prefix of the =rrd-ui= API                                  |
+| ~apiBase~  | ~string~          | ~api/~   | URL prefix of the =kal-rrd-graph= API                           |
 
 Event ~window(start, end)~: the user panned or zoomed the chart (Unix
 seconds).

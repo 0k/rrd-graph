@@ -13,7 +13,7 @@ export default defineConfig({
   build: {
     target: 'es2020',
     lib: {
-      // `api` is a framework-free entry: hosts validating their own rrd-ui
+      // `api` is a framework-free entry: hosts validating their own kal-rrd-graph
       // responses import it without pulling Vue or the chart library.
       entry: { index: resolve(import.meta.dirname, 'src/index.ts'), api: resolve(import.meta.dirname, 'src/api.ts') },
       formats: ['es'],

@@ -4,7 +4,7 @@ import { apiUrl, DEFAULT_API_BASE, parseGraphChange, parseWatchSnapshot } from '
 import type { TimeWindow } from '../types.js'
 
 export interface GraphWatchOptions {
-  /** URL prefix of the rrd-ui API, default `api/`. */
+  /** URL prefix of the kal-rrd-graph API, default `api/`. */
   apiBase?: string
 }
 
