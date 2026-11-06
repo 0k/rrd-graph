@@ -24,6 +24,7 @@ changes.
 | Tail merges keep the newest series drawing keys                          | ~chart.test.mjs~ "a tail merge keeps the tail series drawing keys"    |
 | Frisquet chart renders fills, dashes, widths, hatch and y ticks          | one-off Playwright check against =rrd-ui= on a copy of the boiler RRD |
 | Card load/tail/abort/visibility/watch semantics unchanged                | ~graph-refresh.test.mjs~ (all cases moved from =rrd-ui=)              |
+| A refused watch snapshot logs the server's reason and HTTP status        | ~graph-refresh.test.mjs~ "snapshot errors are reported and retried"   |
 | One card works without an injected scheduler or tree knowledge           | ~graph-refresh.test.mjs~ "standalone card"                            |
 | Linked charts share one link key                                         | ~contracts.test.mjs~                                                  |
 | Legends fit their labels; linked charts share the widest legend width   | ~graph-refresh.test.mjs~ "linked charts fit their legends"; =rrd-ui= Playwright check of aligned plots |
